@@ -379,9 +379,24 @@ print(correlation)
 #   What would that tell you about your model, or about the experiment?
 
 # %%
+predicted_cA = cA_model_all(x_all, *popt)
+residuals = cA_all - predicted_cA
+
+for T in temperatures:
+    mask = T_all == T
+    plt.plot(t_all[mask], residuals[mask], 'o', label=f'{T:.0f} K')
+
+plt.axhline(0, color='black', linestyle='--')
+plt.xlabel('time (s)')
+plt.ylabel('residual (mol/L)')
+plt.legend()
+plt.show()
+
+s = np.sqrt(np.sum(residuals**2) / (len(cA_all) - len(popt)))
+print(f's = {s:.3f} mol/L')
 
 # %% [markdown]
-# *Answer:*
+# The residuals are scattered around zero without a clear pattern, although the 298 K data appears more spread out. The estimated residual standard deviation is 0.089 mol/L, much larger than the instrument's +/- 0.01 mol/L precision. This suggests model mismatch or other experimental variability.
 
 # %% [markdown]
 # ## 5. Your project
