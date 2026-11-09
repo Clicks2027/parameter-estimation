@@ -202,6 +202,23 @@ print(f"kr = {popt[1]:.5f} +/- {perr[1]:.5f} 1/s")
 # or exothermic? How can you tell?
 
 # %%
+fit_results = {}
+
+for T in temperatures:
+    popt_T, pcov_T = scipy.optimize.curve_fit(
+        cA_model, times, cA_data[T], p0=[0.02, 0.02]
+    )
+    perr_T = np.sqrt(np.diag(pcov_T))
+    K_T = popt_T[0] / popt_T[1]
+    fit_results[T] = (popt_T, perr_T, K_T)
+    print(
+        f"{T:.2f} K: kf = {popt_T[0]:.5f} +/- {perr_T[0]:.5f} 1/s, "
+        f"kr = {popt_T[1]:.5f} +/- {perr_T[1]:.5f} 1/s, K = {K_T:.4f}"
+    )
+
+
+# %% [markdown]
+# K increases as temperature increases, so the reaction is endothermic.
 
 # %% [markdown]
 # **(b) Arrhenius.** As in Lecture 13: `scipy.stats.linregress` on $\ln k_f$ against
@@ -215,6 +232,28 @@ print(f"kr = {popt[1]:.5f} +/- {perr[1]:.5f} 1/s")
 # $\Delta H$ agree with what you said in (a)?
 
 # %%
+kf_values = np.array([fit_results[T][0][0] for T in temperatures])
+arrhenius_fit = scipy.stats.linregress(1 / temperatures, np.log(kf_values))
+
+Ea = -arrhenius_fit.slope * R / 1000
+log10A = arrhenius_fit.intercept / np.log(10)
+Ea_se = arrhenius_fit.stderr * R / 1000
+log10A_se = arrhenius_fit.intercept_stderr / np.log(10)
+
+print(f"Ea = {Ea:.2f} +/- {Ea_se:.2f} kJ/mol")
+print(f"log10(A) = {log10A:.2f} +/- {log10A_se:.2f}")
+
+K_values = np.array([fit_results[T][2] for T in temperatures])
+vant_hoff_fit = scipy.stats.linregress(1 / temperatures, np.log(K_values))
+
+dH = -vant_hoff_fit.slope * R / 1000
+dS = vant_hoff_fit.intercept * R
+dH_se = vant_hoff_fit.stderr * R / 1000
+dS_se = vant_hoff_fit.intercept_stderr * R
+
+print(f"dH = {dH:.2f} +/- {dH_se:.2f} kJ/mol")
+print(f"dS = {dS:.2f} +/- {dS_se:.2f} J/mol/K")
+
 
 # %% [markdown]
 # **(d)** `linregress` gave you a ± on each of these. What does that ± know about,
@@ -222,7 +261,7 @@ print(f"kr = {popt[1]:.5f} +/- {perr[1]:.5f} 1/s")
 # the ± you got in (a).
 
 # %% [markdown]
-# *Answer:*
+# The +/- from lingress reflect how closely the three fitted points follow a straight line. They leave out the uncertainties in the fitted rate constants and equilibrium constants from 2a, because those values are treated as exact in the regressions. With only three temperatures, the standard errors are also based on very few points.
 
 # %% [markdown]
 # ## 3. All the data at once
