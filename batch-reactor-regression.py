@@ -302,20 +302,52 @@ print(T_all[:12], t_all[:12], cA_all[:12], sep='\n')
 def cA_model_all(x, log10A, Ea, dH, dS):
     """C_A (mol/L) for every (T, t) pair in x. Ea and dH in kJ/mol, dS in J/mol/K."""
     T_col, t_col = x
-    
+    cA = np.empty_like(t_col)
+
+    for T in np.unique(T_col):
+        mask = T_col == T
+        kf = 10**log10A * np.exp(-Ea * 1000 / (R * T))
+        K = np.exp(-(dH * 1000 - T * dS) / (R * T))
+        kr = kf / K
+        cA[mask] = cA_model(t_col[mask], kf, kr)
+
+    return cA
+
 
 
 # %%
+p0 = [log10A, Ea, dH, dS]
+popt, pcov = scipy.optimize.curve_fit(cA_model_all, x_all, cA_all, p0=p0)
+perr = np.sqrt(np.diag(pcov))
+
+print(f"log10(A) = {popt[0]:.2f} +/- {perr[0]:.2f}")
+print(f"Ea = {popt[1]:.2f} +/- {perr[1]:.2f} kJ/mol")
+print(f"dH = {popt[2]:.2f} +/- {perr[2]:.2f} kJ/mol")
+print(f"dS = {popt[3]:.2f} +/- {perr[3]:.2f} J/mol/K")
+
 
 # %% [markdown]
 # **(b)** Now start from your estimates from before the experiments instead (6, 45, −10, −50).
 # Does it find the same answer? How far did the data move you from what you expected?
 
 # %%
+p0_prior = [6, 45, -10, -50]
+popt_prior, pcov_prior = scipy.optimize.curve_fit(
+    cA_model_all, x_all, cA_all, p0=p0_prior
+)
+perr_prior = np.sqrt(np.diag(pcov_prior))
+
+print(popt_prior)
+print(popt_prior - popt)
+
 
 # %% [markdown]
 # **(c)** Compare with task 2. Are the centres the same? Are the error bars? Which set of
 # error bars would you believe, and why?
+#
+# The centres are similar and overlap within one standard error. 
+#
+# The centres are similar and overlap within one standard error. Task 2 gives log10(A) = 9.23 +/- 0.16, Ea = 62.77 +/- 0.95 kJ/mol, dH = 11.97 +/- 0.74 kJ/mol, and dS = 38.72 +/- 2.38 J/mol/K. Task 3 gives 9.48 +/- 0.37, 64.28 +/- 2.14 kJ/mol, 11.53 +/- 0.79 kJ/mol, and 37.33 +/- 2.51 J/mol/K, respectively. Task 3's error bars are larger for log10(A), Ea, dH, and dS. I would trust Task 3's error bars more because it fits all 30 measurements at once; Task 2's regression uses only three points and does not include uncertainty in the fitted rate constants and K values.
 #
 # **(d) The correlation matrix.** The off-diagonal elements of `pcov` say how the errors in
 # the parameters go together (Lecture 13). Turn the covariance into correlations:
@@ -324,9 +356,11 @@ def cA_model_all(x, log10A, Ea, dH, dS):
 # If someone quotes only your four ± values, what are they missing?
 
 # %%
+correlation = pcov / np.outer(perr, perr)
+print(correlation)
 
 # %% [markdown]
-# *Answer:*
+# log_10 A and Ea, and dH and dS, are strongly correlated. Over the limited temperature range, changes in each pair can compensate for one another. The four separate +/- values don’t show those relationships.
 
 # %% [markdown]
 # ## 4. Look at the residuals
