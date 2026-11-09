@@ -396,7 +396,7 @@ s = np.sqrt(np.sum(residuals**2) / (len(cA_all) - len(popt)))
 print(f's = {s:.3f} mol/L')
 
 # %% [markdown]
-# The residuals are scattered around zero without a clear pattern, although the 298 K data appears more spread out. The estimated residual standard deviation is 0.089 mol/L, much larger than the instrument's +/- 0.01 mol/L precision. This suggests model mismatch or other experimental variability.
+# The residuals are scattered around zero without a clear pattern, although the 298 K data appears more spread out. The estimate residual standard deviation is 0.089 mol/L, much larger than the instrument's +/- 0.01 mol/L precision. This suggests model mismatch or other experimental variability.
 
 # %% [markdown]
 # ## 5. Your project
@@ -408,7 +408,7 @@ print(f's = {s:.3f} mol/L')
 # correlated, the way $E_a$ and $A$ are here?
 
 # %% [markdown]
-# *Answer:*
+# I will fit the Cu(I) saturation level, regeneration rate constant, and flow factor to etch rates calculated from foil thickness and etch time in [3]. Diffusivity, viscosity, and oxygen solubility will come from the literature. My proposal does not give point-by-point uncertainties for the etch-rate data, so I will need to estimate them from the measurements or reported spread. The saturation level and flow factor may be correlated because both affect the etch rate, and the regeneration constant may also correlate with the saturation level because both affect how the rate changes as Cu(I) builds up.
 
 # %% [markdown]
 # ## Stretch problems (optional)
