@@ -5,9 +5,9 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.3
+#       jupytext_version: 1.19.6
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: base
 #     language: python
 #     name: python3
 # ---
@@ -106,10 +106,31 @@ plt.show()
 # %%
 def cA_model(times, kf, kr):
     """C_A (mol/L) at each of `times` (s), for rate constants kf and kr (1/s)."""
-    
+    def rate(t, y):
+        cA = y[0]
+        cB = cA0 - cA
+        return [kr * cB - kf * cA]
+
+    solution = scipy.integrate.solve_ivp(
+        rate,
+        (0, max(times)),
+        [cA0],
+        t_eval=times,
+    )
+    if not solution.success:
+        raise RuntimeError(f"ODE integration failed: {solution.message}")
+    return solution.y[0]
 
 
-# your test here
+test_times = np.array([0.0, 10.0, 50.0, 100.0])
+kf_test, kr_test = 0.04, 0.02
+cA_eq = cA0 * kr_test / (kf_test + kr_test)
+cA_exact = cA_eq + (cA0 - cA_eq) * np.exp(
+    -(kf_test + kr_test) * test_times
+)
+assert np.allclose(
+    cA_model(test_times, kf_test, kr_test), cA_exact, rtol=1e-3, atol=1e-8
+)
 
 
 # %% [markdown]
@@ -120,6 +141,19 @@ def cA_model(times, kf, kr):
 # from the data. Roughly how long does $C_A$ take to get halfway to where it ends up?
 
 # %%
+print(cA_model(times, 1, 1))
+
+popt_default, pcov_default = scipy.optimize.curve_fit(
+    cA_model, times, cA_data[298.15]
+)
+print(popt_default)
+
+
+# %%
+popt, pcov = scipy.optimize.curve_fit(
+    cA_model, times, cA_data[298.15], p0=[0.02, 0.02]
+)
+print(popt)
 
 # %%
 
@@ -131,9 +165,32 @@ def cA_model(times, kf, kr):
 # choose it?
 
 # %%
+perr = np.sqrt(np.diag(pcov))
+t_fit = np.linspace(0, max(times), 200)
+cA_fit = cA_model(t_fit, *popt)
+residuals = cA_data[298.15] - cA_model(times, *popt)
 
-# %% [markdown]
-# *Answer:*
+fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+ax1.plot(times, cA_data[298.15], 'o', label='data')
+ax1.plot(t_fit, cA_fit, label='fit')
+ax1.set_ylabel('$C_A$ (mol/L)')
+ax1.legend()
+
+ax2.plot(times, residuals, 'o')
+ax2.axhline(0, color='k')
+ax2.set_xlabel('time (s)')
+ax2.set_ylabel('residual')
+plt.tight_layout()
+plt.show()
+
+print(f"kf = {popt[0]:.5f} +/- {perr[0]:.5f} 1/s")
+print(f"kr = {popt[1]:.5f} +/- {perr[1]:.5f} 1/s")
+
+
+# %% [markdown] vscode={"languageId": "raw"}
+# It takes C_A 19 seconds to get halfway to where it ends up. Without p0, curve_fit started with kf=kr=1 and the model predicted C_A was already about 5 mol/L at the first measurement time, 10 seconds. But the measured value there was 8.649 mol/L, so that starting guess made the reaction look much faster than the data suggests. I useda starting guess of p0 = 0.02, 0.02, rates at hundreths per second because the data changes over a few tens of seconds. The reported uncertainties (±) for (k_f) and (k_r) are one standard error.
+
+# %%
 
 # %% [markdown]
 # ## 2. Three temperatures, in two steps
